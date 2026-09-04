@@ -1,28 +1,17 @@
-// ==========================================
-// OFFLINE QUEUE & AUTO-SYNC ENGINE
-// ==========================================
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6ofXhvXYB7Tzm_vGP9CkovCt0hP8MDqwCfMJYmLhQJGip1zMnnf7_V_sNLQmKvF_Ouw/exec";
 
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyKTM6KanSJhQn01emHnoDny1btCpZTVInaQs3YgfDd27TMDG9aDLLIkCIFnMssosJ6hQ/exec"; // Ganti dengan URL Deploy GAS Anda
-
-// Masukkan data SO ke antrean offline IndexedDB
 async function queueSOData(soData) {
   const db = await openDB();
   const tx = db.transaction("so_queue", "readwrite");
   const store = tx.objectStore("so_queue");
   
-  // Berikan ID unik sementara untuk antrean lokal
   soData.localId = Date.now() + "_" + Math.random().toString(36).substr(2, 5);
   soData.syncStatus = "PENDING";
   
   await store.add(soData);
-  
-  // Jika jaringan online, langsung picu sinkronisasi
-  if (navigator.onLine) {
-    triggerAutoSync();
-  }
+  if (navigator.onLine) triggerAutoSync();
 }
 
-// Proses sinkronisasi data dari IndexedDB ke Google Sheets
 async function triggerAutoSync() {
   if (!navigator.onLine) return;
 
@@ -42,40 +31,23 @@ async function triggerAutoSync() {
     const response = await fetch(GAS_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "saveSOBatch",
-        payload: pendingItems
-      })
+      body: JSON.stringify({ action: "saveSOBatch", payload: pendingItems })
     });
 
     const result = await response.json();
-
     if (result.success) {
-      // Hapus data yang berhasil di-sync dari antrean IndexedDB
       const clearTx = db.transaction("so_queue", "readwrite");
-      const clearStore = clearTx.objectStore("so_queue");
-      await clearStore.clear();
-
+      await clearTx.objectStore("so_queue").clear();
       updateSyncUI("ONLINE", 0);
       showToast(`${result.count} data berhasil terupload!`);
-    } else {
-      updateSyncUI("ERROR", pendingItems.length);
     }
   } catch (err) {
-    console.error("Auto Sync Failed:", err);
     updateSyncUI("OFFLINE", pendingItems.length);
   }
 }
 
-// Pemantau Status Koneksi Internet
-window.addEventListener("online", () => {
-  updateSyncUI("ONLINE", 0);
-  triggerAutoSync();
-});
-
-window.addEventListener("offline", () => {
-  updateSyncUI("OFFLINE", 0);
-});
+window.addEventListener("online", () => { updateSyncUI("ONLINE", 0); triggerAutoSync(); });
+window.addEventListener("offline", () => { updateSyncUI("OFFLINE", 0); });
 
 function updateSyncUI(status, count = 0) {
   const netBadge = document.getElementById("networkStatus");
