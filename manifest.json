@@ -1,16 +1,21 @@
 {
-  "name": "SOM - Stock Opname Mandiri",
-  "short_name": "SOM System",
-  "description": "Aplikasi Stock Opname Profesional",
-  "start_url": "/index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#007aff",
+  "short_name": "SO Mandiri",
+  "name": "Stock Opname Mandiri PWA",
   "icons": [
     {
-      "src": "https://www.google.com/images/branding/product/ico/googleg_lodp.ico",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "assets/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": "./index.html",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
+  "display": "standalone",
+  "orientation": "portrait"
 }
