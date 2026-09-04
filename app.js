@@ -1,115 +1,137 @@
-// GANTI DENGAN URL WEB APP DARI GOOGLE APPS SCRIPT ANDA
-const API_URL = "https://script.google.com/macros/s/AKfycbzR2B4sdR0VbZlk5W9x-4xAPpHjqDFtg_t93Wgpwwclw5fWvCh20DArBF2jz_jarCHq9w/exec";
+// ====== WAJIB GANTI DENGAN URL WEB APP ANDA =======
+const API_URL = "https://script.google.com/macros/s/AKfycbwAlINdFJEiRZpr13O31gcPV3ygqfSis7JZvPszygiFhKOMJvrJ_Fa0J-PICQNdMSNW/exec";
+// ====================================================
 
-// State Management & DB Lokal
 const state = { currentUser: null, isOnline: navigator.onLine, html5QrCode: null };
 localforage.config({ name: 'SOM_DB' });
 
-// UI Binders
-const UI = {
-    loginScreen: document.getElementById('loginScreen'),
-    appScreen: document.getElementById('appScreen'),
-    btnScanner: document.getElementById('btnScanner'),
-    reader: document.getElementById('reader')
-};
+// ==========================================
+// 1. HELPER: FETCH KE GOOGLE APPS SCRIPT
+// ==========================================
+// PENTING: Gunakan text/plain untuk menghindari error CORS preflight
+async function fetchGAS(payload) {
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        throw error;
+    }
+}
 
-// 1. SYSTEM INITIALIZATION & LOGIN
-document.addEventListener("DOMContentLoaded", async () => {
-    // Check Auto Logout (12 Hours)
-    const loginTime = localStorage.getItem('loginTime');
-    if (loginTime && (Date.now() - parseInt(loginTime)) > 43200000) logout();
-
+// ==========================================
+// 2. INITIALIZATION & LOGIN
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
         state.currentUser = JSON.parse(savedUser);
         showAppScreen();
     }
 
-    // Toggle Password View
+    // Toggle Password Visibility
     document.getElementById('togglePassword').addEventListener('click', (e) => {
         const pInp = document.getElementById('password');
         pInp.type = pInp.type === 'password' ? 'text' : 'password';
-        e.target.innerText = pInp.type === 'password' ? 'Lihat' : 'Tutup';
+        e.target.innerText = pInp.type === 'password' ? 'Tutup' : 'Lihat';
     });
 });
 
 document.getElementById('btnLogin').addEventListener('click', async () => {
-    const user = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
     
-    // Rate Limiting Logic (Lockout 10 Mins)
-    const attempts = parseInt(localStorage.getItem(`att_${user}`) || 0);
-    const lockTime = parseInt(localStorage.getItem(`lock_${user}`) || 0);
-    if (Date.now() < lockTime) {
-        let mins = Math.ceil((lockTime - Date.now()) / 60000);
-        return Swal.fire('Terkunci!', `Akun diblokir sementara. Coba ${mins} menit lagi.`, 'error');
-    }
+    if(!user || !pass) return Swal.fire('Error', 'Username dan Password wajib diisi', 'warning');
 
-    Swal.showLoading();
+    Swal.fire({ title: 'Memeriksa...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
     try {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'login', username: user, password: pass })
-        });
-        const data = await res.json();
+        const data = await fetchGAS({ action: 'login', username: user, password: pass });
         
         if (data.status === 'success') {
             localStorage.setItem('user', JSON.stringify(data.data));
-            localStorage.setItem('loginTime', Date.now().toString());
-            localStorage.removeItem(`att_${user}`);
             state.currentUser = data.data;
             showAppScreen();
             Swal.close();
         } else {
-            handleFailedLogin(user, attempts);
-            Swal.fire('Gagal', data.message, 'error');
+            Swal.fire('Login Gagal', data.message || 'Username/Password salah', 'error');
         }
     } catch (e) {
-        Swal.fire('Error Jaringan', 'Pastikan koneksi internet stabil saat login.', 'warning');
+        Swal.fire('Error Jaringan', 'Gagal menghubungi server. Pastikan URL API_URL sudah benar.', 'error');
     }
 });
 
-function handleFailedLogin(user, attempts) {
-    attempts += 1;
-    localStorage.setItem(`att_${user}`, attempts);
-    if (attempts >= 6) {
-        let penalty = 10 * 60000 * Math.floor(attempts / 6); // Kelipatan 10 menit
-        localStorage.setItem(`lock_${user}`, Date.now() + penalty);
-    }
-}
-
 function showAppScreen() {
-    UI.loginScreen.classList.add('hidden');
-    UI.appScreen.classList.remove('hidden');
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
     document.getElementById('userGreetings').innerText = `Halo, ${state.currentUser.nama}`;
+    
+    // Tampilkan tombol menu Admin jika rolenya Admin
+    if(state.currentUser.role.toLowerCase() === 'admin') {
+        document.getElementById('tabAdmin').classList.remove('hidden');
+        document.getElementById('tabAdmin').classList.add('flex');
+    }
+    
+    switchTab('SO'); // Default tab
     checkOfflineQueue();
 }
 
 function logout() {
     localStorage.removeItem('user');
-    localStorage.removeItem('loginTime');
     window.location.reload();
 }
 
-// 2. SCANNER (HTML5 QRCODE)
-UI.btnScanner.addEventListener('click', () => {
+// ==========================================
+// 3. TAB NAVIGATION SYSTEM
+// ==========================================
+function switchTab(tabName) {
+    // Sembunyikan semua konten view
+    document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+    
+    // Reset warna icon bawah
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-[#007aff]');
+        btn.classList.add('text-gray-400');
+    });
+
+    // Tampilkan view yang dipilih
+    document.getElementById('view' + tabName).classList.remove('hidden');
+    
+    // Warnai icon yang aktif
+    const activeBtn = document.getElementById('tab' + tabName);
+    activeBtn.classList.remove('text-gray-400');
+    activeBtn.classList.add('text-[#007aff]');
+}
+
+// ==========================================
+// 4. SCANNER & MASTER DATA PULL
+// ==========================================
+document.getElementById('btnScanner').addEventListener('click', () => {
+    const reader = document.getElementById('reader');
+    const btn = document.getElementById('btnScanner');
+
     if (!state.html5QrCode) state.html5QrCode = new Html5Qrcode("reader");
     
-    if (UI.reader.classList.contains('hidden')) {
-        UI.reader.classList.remove('hidden');
-        UI.btnScanner.innerText = 'Tutup Kamera';
+    if (reader.classList.contains('hidden')) {
+        reader.classList.remove('hidden');
+        btn.innerText = 'Tutup Kamera';
+        
         state.html5QrCode.start(
             { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 }, formatsToSupport: [ Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.CODE_128 ] },
+            { fps: 10, qrbox: { width: 250, height: 150 } },
             (decodedText) => {
                 document.getElementById('inputBarcode').value = decodedText;
-                beep();
-                fetchProductMaster(decodedText);
+                processBarcode(decodedText);
                 stopScanner();
             },
-            (errorMessage) => { /* Ignore feed errors */ }
+            (err) => {} // Abaikan error frame kosong
         ).catch(err => {
-            Swal.fire('Kamera Error', 'Izin kamera ditolak atau perangkat tidak didukung.', 'error');
+            Swal.fire('Kamera Error', 'Gagal mengakses kamera.', 'error');
+            stopScanner();
         });
     } else {
         stopScanner();
@@ -119,19 +141,25 @@ UI.btnScanner.addEventListener('click', () => {
 function stopScanner() {
     if (state.html5QrCode && state.html5QrCode.isScanning) {
         state.html5QrCode.stop().then(() => {
-            UI.reader.classList.add('hidden');
-            UI.btnScanner.innerText = 'Buka Kamera';
+            document.getElementById('reader').classList.add('hidden');
+            document.getElementById('btnScanner').innerText = 'Kamera';
         });
     }
 }
 
-async function fetchProductMaster(barcode) {
-    if(!state.isOnline) return showUnknownProduct(barcode); // Jika offline, bypass ke unknown
+// Tombol cari manual dari input ketikan
+document.getElementById('btnCariManual').addEventListener('click', () => {
+    const code = document.getElementById('inputBarcode').value;
+    if(code) processBarcode(code);
+});
+
+async function processBarcode(barcode) {
+    if(!state.isOnline) return showUnknownProduct(barcode); 
     
-    Swal.showLoading();
+    Swal.fire({ title: 'Mencari...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    
     try {
-        const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_master', barcode: barcode }) });
-        const resData = await res.json();
+        const resData = await fetchGAS({ action: 'get_master', barcode: barcode });
         
         document.getElementById('scanResult').classList.remove('hidden');
         if(resData.status === 'success') {
@@ -142,34 +170,21 @@ async function fetchProductMaster(barcode) {
         } else {
             showUnknownProduct(barcode);
         }
-    } catch(e) { showUnknownProduct(barcode); }
+    } catch(e) { 
+        showUnknownProduct(barcode); 
+    }
 }
 
 function showUnknownProduct(barcode) {
+    Swal.close();
     document.getElementById('scanResult').classList.remove('hidden');
     document.getElementById('resUpc').innerText = barcode;
-    document.getElementById('resDesc').innerText = "Data Unknown / Tidak Ditemukan";
-    
-    Swal.fire({
-        title: 'Data Tidak Terdaftar',
-        text: "Apakah kamu ingin lanjut mencatat? Pastikan barcode benar atau hubungi admin.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#007aff',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Lanjutkan (Unknown)'
-    });
+    document.getElementById('resDesc').innerText = "Tidak Ditemukan (Unknown)";
 }
 
-function beep() {
-    let ctx = new (window.AudioContext || window.webkitAudioContext)();
-    let osc = ctx.createOscillator();
-    osc.type = 'sine'; osc.frequency.value = 800;
-    osc.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.1);
-}
-
-// 3. OFFLINE CAPABILITY & SYNC
+// ==========================================
+// 5. PENYIMPANAN SO & OFFLINE SYNC
+// ==========================================
 window.addEventListener('online', () => { state.isOnline = true; updateNetworkUI(); syncData(); });
 window.addEventListener('offline', () => { state.isOnline = false; updateNetworkUI(); });
 
@@ -179,8 +194,8 @@ function updateNetworkUI() {
 }
 
 document.getElementById('btnSaveSO').addEventListener('click', async () => {
-    const lokasi = document.getElementById('inputLokasi').value;
-    const upc = document.getElementById('inputBarcode').value;
+    const lokasi = document.getElementById('inputLokasi').value.trim();
+    const upc = document.getElementById('inputBarcode').value.trim();
     const desc = document.getElementById('resDesc').innerText;
     const qty = document.getElementById('inputQty').value;
     const ket = document.getElementById('inputKet').value;
@@ -194,51 +209,20 @@ document.getElementById('btnSaveSO').addEventListener('click', async () => {
         lokasi, upc, deskripsi: desc, qty, keterangan: ket
     };
 
-    // Validasi Duplikat di Local Array
     let queue = await localforage.getItem('so_queue') || [];
-    const isDuplicate = queue.find(q => q.upc === upc && q.lokasi === lokasi);
+    queue.push(payload);
+    await localforage.setItem('so_queue', queue);
     
-    if (isDuplicate) {
-        Swal.fire({
-            title: 'Barcode Sudah Ada di Lokasi Ini',
-            text: "Data ini sudah pernah Anda scan di lokasi yang sama. Pilih tindakan:",
-            icon: 'question',
-            showDenyButton: true,
-            showCancelButton: true,
-            confirmButtonText: 'Tambahkan (Add)',
-            denyButtonText: 'Timpa (Replace)',
-            cancelButtonText: 'Batal'
-        }).then(async (result) => {
-            if (result.isConfirmed) { // Add
-                payload.qty = (parseInt(isDuplicate.qty) + parseInt(qty)).toString();
-                queue = queue.filter(q => q.id !== isDuplicate.id); // Hapus yg lama
-                queue.push(payload);
-            } else if (result.isDenied) { // Replace
-                queue = queue.filter(q => q.id !== isDuplicate.id);
-                queue.push(payload);
-            } else { return; } // Cancel
-            
-            await localforage.setItem('so_queue', queue);
-            finishSaveUI();
-        });
-    } else {
-        queue.push(payload);
-        await localforage.setItem('so_queue', queue);
-        finishSaveUI();
-    }
-});
-
-async function finishSaveUI() {
-    // Reset Form (Kecuali Lokasi sesuai instruksi)
+    // Reset Form
     document.getElementById('inputBarcode').value = '';
     document.getElementById('inputQty').value = '';
     document.getElementById('inputKet').value = '';
     document.getElementById('scanResult').classList.add('hidden');
     
-    Swal.fire({ title: 'Tersimpan!', text: 'Data disave ke penyimpanan lokal/sistem.', icon: 'success', timer: 1500, showConfirmButton: false });
+    Swal.fire({ title: 'Tersimpan!', toast: true, position: 'top-end', icon: 'success', timer: 1500, showConfirmButton: false });
     
     if (state.isOnline) { syncData(); } else { checkOfflineQueue(); }
-}
+});
 
 async function checkOfflineQueue() {
     const queue = await localforage.getItem('so_queue') || [];
@@ -257,25 +241,65 @@ async function syncData() {
 
     document.getElementById('btnSync').innerText = "Syncing...";
     try {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'sync_so', payload: queue })
-        });
-        const resData = await res.json();
+        const resData = await fetchGAS({ action: 'sync_so', payload: queue });
         
         if (resData.status === 'success') {
             await localforage.setItem('so_queue', []);
             checkOfflineQueue();
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'success',
-                title: 'Data berhasil disinkronisasi ke Cloud.',
-                showConfirmButton: false, timer: 3000
-            });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Data tersinkronisasi', showConfirmButton: false, timer: 3000 });
         }
     } catch(e) {
         console.error("Gagal Sync", e);
     } finally {
-        document.getElementById('btnSync').innerText = "Sync Sekarang";
+        document.getElementById('btnSync').innerText = "Sync";
     }
 }
 document.getElementById('btnSync').addEventListener('click', syncData);
+
+// ==========================================
+// 6. ADMIN FUNCTIONS
+// ==========================================
+async function submitNewUser() {
+    const nama = document.getElementById('addName').value;
+    const username = document.getElementById('addUsername').value;
+    const password = document.getElementById('addPassword').value;
+    const role = document.getElementById('addRole').value;
+
+    if(!nama || !username || !password) return Swal.fire('Error', 'Semua kolom wajib diisi!', 'warning');
+
+    Swal.showLoading();
+    try {
+        const data = await fetchGAS({ action: 'add_user', payload: { nama, username, password, role } });
+        if (data.status === 'success') {
+            Swal.fire('Berhasil', data.message, 'success');
+            document.getElementById('addName').value = '';
+            document.getElementById('addUsername').value = '';
+            document.getElementById('addPassword').value = '';
+        } else {
+            Swal.fire('Gagal', data.message, 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Gagal memproses ke server.', 'error');
+    }
+}
+
+async function submitResetPassword() {
+    const username = document.getElementById('resetUsername').value;
+    const new_password = document.getElementById('resetPasswordInput').value;
+
+    if(!username || !new_password) return Swal.fire('Error', 'Semua kolom wajib diisi!', 'warning');
+
+    Swal.showLoading();
+    try {
+        const data = await fetchGAS({ action: 'reset_password', payload: { username, new_password } });
+        if (data.status === 'success') {
+            Swal.fire('Berhasil', data.message, 'success');
+            document.getElementById('resetUsername').value = '';
+            document.getElementById('resetPasswordInput').value = '';
+        } else {
+            Swal.fire('Gagal', data.message, 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Gagal memproses ke server.', 'error');
+    }
+}
