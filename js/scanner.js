@@ -1,24 +1,28 @@
 let html5QrCodeEngine = null;
 
 function initScanner() {
+  if (html5QrCodeEngine) return;
+  
   html5QrCodeEngine = new Html5Qrcode("reader");
-  const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+  const config = { fps: 10, qrbox: { width: 220, height: 120 } };
 
   Html5Qrcode.getCameras().then(cameras => {
     if (cameras && cameras.length) {
-      const cameraId = cameras[cameras.length - 1].id; // Gunakan kamera belakang
+      const cameraId = cameras[cameras.length - 1].id;
       html5QrCodeEngine.start(
         cameraId, 
         config, 
         (decodedText) => onBarcodeScanned(decodedText),
-        (errorMessage) => { /* handling silent frame scan error */ }
+        () => {}
       );
     }
-  }).catch(err => console.error("Camera access failed", err));
+  }).catch(err => console.error("Camera error:", err));
 }
 
-function toggleTorch() {
+function stopScanner() {
   if (html5QrCodeEngine) {
-    // Torch handling logic
+    html5QrCodeEngine.stop().then(() => {
+      html5QrCodeEngine = null;
+    }).catch(err => console.error(err));
   }
 }
