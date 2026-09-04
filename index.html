@@ -1,187 +1,330 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full bg-[#F2F2F7]">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Stock Opname Mandiri</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#F2F2F7">
-  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
-  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.10/dist/quagga.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
+    .ios-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(235, 235, 240, 0.8); }
+    .ios-btn { background: #007AFF; color: white; border-radius: 12px; font-weight: 600; transition: all 0.2s; }
+    .ios-btn:active { transform: scale(0.97); opacity: 0.8; }
+    .ios-input { background: #EFEFF4; border-radius: 10px; padding: 12px; font-size: 15px; border: none; outline: none; }
+    .ios-input:focus { background: #E5E5EA; ring: 2px #007AFF; }
+  </style>
 </head>
-<body class="antialiased select-none">
+<body class="h-full flex flex-col justify-between text-gray-900 select-none">
 
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="min-h-screen flex flex-col justify-between p-6">
-    <div class="mt-12 text-center">
-      <div class="w-20 h-20 bg-gray-200 rounded-3xl mx-auto flex items-center justify-center mb-4 shadow-inner">
-        <svg class="w-10 h-10 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+  <div id="app" class="max-w-md mx-auto w-full h-full flex flex-col bg-[#F2F2F7] relative overflow-hidden shadow-2xl">
+    
+    <header class="p-4 bg-white/70 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight">SO Mandiri</h1>
+        <p id="user-badge" class="text-xs text-gray-500">Offline Mode</p>
       </div>
-      <h1 class="text-2xl font-bold text-gray-900">SO Mandiri</h1>
-      <p class="text-xs text-gray-500 mt-1">Sistem Stock Opname Mobile Pro</p>
-    </div>
+      <div id="sync-status" class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+        <span class="text-xs font-semibold text-gray-600">Online</span>
+      </div>
+    </header>
 
-    <div class="ios-card p-6 space-y-4 shadow-sm">
-      <div>
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Username</label>
-        <input type="text" id="loginUsername" class="ios-input w-full mt-1 text-sm" placeholder="Masukkan username">
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Password</label>
-        <div class="relative">
-          <input type="password" id="loginPassword" class="ios-input w-full mt-1 text-sm pr-10" placeholder="Min 6 karakter">
-          <button onclick="togglePasswordVisibility()" class="absolute right-3 top-3.5 text-gray-400">
-            <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          </button>
+    <main id="main-content" class="flex-1 overflow-y-auto p-4 space-y-4">
+      
+      <section id="view-login" class="space-y-6 pt-6">
+        <div class="text-center space-y-2">
+          <div class="w-20 h-20 bg-black rounded-3xl mx-auto flex items-center justify-center text-white text-3xl font-bold shadow-lg">SO</div>
+          <h2 class="text-2xl font-bold">Selamat Datang</h2>
+          <p class="text-sm text-gray-500">Silahkan login untuk memulai Stock Opname</p>
         </div>
-      </div>
-      <button onclick="execLogin()" class="ios-btn w-full py-3 text-center mt-2 shadow-sm">Masuk</button>
-    </div>
 
-    <div id="pwaInstallBanner" class="ios-card p-4 flex items-center justify-between border border-gray-100">
-      <div class="flex items-center space-x-3">
-        <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-xs">PWA</div>
-        <div>
-          <p class="text-xs font-semibold">Install Aplikasi</p>
-          <p class="text-[10px] text-gray-400">Gunakan offline di iOS/Android</p>
+        <div class="ios-card p-6 space-y-4 shadow-sm">
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase">Username</label>
+            <input type="text" id="login-username" class="ios-input w-full mt-1" placeholder="Masukkan Username">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 uppercase">Password</label>
+            <div class="relative">
+              <input type="password" id="login-password" class="ios-input w-full mt-1 pr-10" placeholder="Min 6 Karakter">
+              <button onclick="togglePassword()" class="absolute right-3 top-3.5 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </button>
+            </div>
+          </div>
+          <button onclick="handleLogin()" class="ios-btn w-full py-3.5 text-center mt-2">Masuk System</button>
         </div>
-      </div>
-      <button class="text-xs bg-gray-100 text-black px-3 py-1.5 rounded-full font-semibold">Install</button>
-    </div>
-  </div>
 
-  <!-- MAIN APP SCREEN (DASHBOARD) -->
-  <div id="appScreen" class="hidden min-h-screen flex flex-col pb-20">
-    <div class="bg-white/80 backdrop-blur-md sticky top-0 z-40 px-5 py-4 border-b border-gray-200 flex justify-between items-center">
-      <div>
-        <p class="text-[10px] text-gray-400 uppercase font-bold">Logged in as</p>
-        <h2 id="userDisplayName" class="text-base font-bold text-gray-800">Nama Staff</h2>
-      </div>
-      <div id="networkStatus" class="flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-        <span class="w-2 h-2 rounded-full bg-green-500"></span>
-        <span id="networkText">ONLINE</span>
-      </div>
-    </div>
-
-    <main id="mainContainer" class="p-4 space-y-4">
-      <!-- VIEW DASHBOARD MENU -->
-      <div id="viewDashboard" class="grid grid-cols-2 gap-4">
-        <button onclick="switchView('so')" class="ios-card p-5 text-left space-y-2 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <div class="ios-card p-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <div>
+              <p class="text-sm font-bold">Install Applikasi PWA</p>
+              <p class="text-xs text-gray-500">Akses Cepat & Offline Support</p>
+            </div>
           </div>
-          <p class="font-bold text-sm">Stock Opname</p>
-          <p class="text-[10px] text-gray-400">Input / Scan barang baru</p>
-        </button>
+          <button onclick="installPWA()" class="bg-gray-200 text-black px-3 py-1.5 rounded-lg text-xs font-bold">Install</button>
+        </div>
+      </section>
 
-        <button onclick="switchView('verifikasi')" class="ios-card p-5 text-left space-y-2 hover:bg-gray-50 transition">
-          <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <p class="font-bold text-sm">Verifikasi</p>
-          <p class="text-[10px] text-gray-400">Cek & validasi selisih Qty</p>
-        </button>
-
-        <!-- Menu Admin -->
-        <button id="btnAdminMenu" onclick="switchView('adminUser')" class="ios-card p-5 text-left space-y-2 hover:bg-gray-50 transition hidden border border-purple-100 col-span-2">
-          <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          </div>
-          <p class="font-bold text-sm">Kelola User Admin</p>
-          <p class="text-[10px] text-gray-400">Tambah user & reset password</p>
-        </button>
-      </div>
-
-      <!-- VIEW STOCK OPNAME (SO) -->
-      <div id="viewSO" class="hidden space-y-4">
+      <section id="view-so" class="hidden space-y-4">
         <div class="ios-card p-4 space-y-3">
-          <label class="text-xs font-bold text-gray-500 uppercase">1. Pilih / Input Lokasi</label>
-          <input type="text" id="soLokasiInput" class="ios-input w-full text-sm" placeholder="Ketik Kode Lokasi (misal: RAK-A1)">
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-bold text-gray-500 uppercase">Lokasi Area SO</label>
+            <button onclick="showAddLokasiModal()" class="text-xs text-blue-600 font-semibold">+ Tambah Lokasi</button>
+          </div>
+          <select id="so-lokasi" class="ios-input w-full font-bold text-gray-800">
+            <option value="">-- Pilih Lokasi --</option>
+          </select>
         </div>
 
         <div class="ios-card p-4 space-y-3">
           <div class="flex justify-between items-center">
-            <label class="text-xs font-bold text-gray-500 uppercase">2. Scan / Barcode</label>
+            <span class="text-xs font-bold text-gray-500 uppercase">Scanner Barcode</span>
+            <select id="scanner-engine" class="text-xs bg-gray-200 rounded p-1">
+              <option value="html5">Engine: HTML5QR</option>
+              <option value="quagga">Engine: QuaggaJS</option>
+            </select>
           </div>
-
-          <div id="interactiveScanner" class="relative bg-black rounded-xl overflow-hidden h-48 flex items-center justify-center">
-            <div id="reader" class="w-full h-full"></div>
-            <div class="absolute inset-0 pointer-events-none border-2 border-white/30 flex items-center justify-center">
-              <div class="w-48 h-24 border-2 border-red-500 rounded-lg relative">
-                <div class="scanner-laser"></div>
-              </div>
+          
+          <div id="interactive" class="viewport relative w-full h-48 bg-black rounded-xl overflow-hidden flex items-center justify-center text-white">
+            <div id="qr-reader" class="w-full h-full"></div>
+            <div class="absolute inset-0 border-2 border-dashed border-white/50 m-8 rounded-lg pointer-events-none flex items-center justify-center">
+              <div class="w-full h-0.5 bg-red-500/80 animate-pulse"></div>
             </div>
           </div>
 
-          <input type="text" id="inputBarcodeManual" onchange="onBarcodeScanned(this.value)" class="ios-input w-full text-sm font-mono" placeholder="Atau ketik Barcode / UPC lalu Enter">
+          <div class="flex gap-2">
+            <input type="text" id="input-barcode" class="ios-input flex-1" placeholder="Scan / Input UPC Barcode">
+            <button onclick="processBarcodeFind()" class="ios-btn px-4">Cari</button>
+          </div>
         </div>
 
-        <div class="ios-card p-4 space-y-2">
+        <div id="product-card" class="ios-card p-4 space-y-3 hidden">
+          <div class="border-b pb-2">
+            <h3 id="p-desc" class="font-bold text-base text-gray-900">Deskripsi Produk</h3>
+            <p id="p-upc" class="text-xs text-gray-500">UPC: -</p>
+          </div>
           <div class="grid grid-cols-2 gap-2 text-xs">
-            <div><span class="text-gray-400">Deskripsi:</span> <p id="outDeskripsi" class="font-bold text-gray-800">-</p></div>
-            <div><span class="text-gray-400">Dept:</span> <p id="outDept" class="font-bold text-gray-800">-</p></div>
-            <div><span class="text-gray-400">Vendor:</span> <p id="outVendor" class="font-bold text-gray-800">-</p></div>
-            <div><span class="text-gray-400">Qty System:</span> <p id="outQtySys" class="font-bold text-blue-600">-</p></div>
+            <div class="bg-gray-100 p-2 rounded">Dept: <span id="p-dept" class="font-semibold">-</span></div>
+            <div class="bg-gray-100 p-2 rounded">Vendor: <span id="p-vendor" class="font-semibold">-</span></div>
+            <div class="bg-blue-50 p-2 rounded col-span-2 text-blue-900">Qty System: <span id="p-sysqty" class="font-bold text-sm">0</span></div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <div>
+              <label class="text-xs font-bold text-gray-500 uppercase">Input Qty Fisik *</label>
+              <input type="number" id="so-qty" class="ios-input w-full text-lg font-bold text-blue-600" placeholder="0">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-gray-500 uppercase">Keterangan (Opsional)</label>
+              <input type="text" id="so-ket" class="ios-input w-full" placeholder="Kondisi barang / Catatan">
+            </div>
+            <button onclick="handleSaveSOItem()" class="ios-btn w-full py-3">Simpan Data SO</button>
           </div>
         </div>
+      </section>
 
-        <div class="ios-card p-4 space-y-3">
-          <label class="text-xs font-bold text-gray-500 uppercase">3. Qty Fisik & Keterangan</label>
-          <div class="flex space-x-2">
-            <input type="number" id="inputQtySO" class="ios-input w-1/3 text-center text-lg font-bold" placeholder="0">
-            <input type="text" id="inputKetSO" class="ios-input w-2/3 text-sm" placeholder="Keterangan (Opsional)">
+      <section id="view-verifikasi" class="hidden space-y-3">
+        <h2 class="font-bold text-lg">Verifikasi & Validasi SO</h2>
+        <div id="verifikasi-list" class="space-y-2">
           </div>
-          <button onclick="saveSOData()" class="ios-btn w-full py-3.5 text-center shadow-lg">Simpan Data SO</button>
-        </div>
-      </div>
+      </section>
 
-      <!-- VIEW SETUP USER ADMIN -->
-      <div id="viewAdminUser" class="hidden space-y-4">
-        <div class="ios-card p-4 space-y-3">
-          <h3 class="text-xs font-bold text-gray-500 uppercase">Tambah User Baru</h3>
-          <input type="text" id="adminNewUsername" class="ios-input w-full text-sm" placeholder="Username">
-          <input type="text" id="adminNewNama" class="ios-input w-full text-sm" placeholder="Nama Staff">
-          <input type="password" id="adminNewPassword" class="ios-input w-full text-sm" placeholder="Password (Min 6 Karakter)">
-          <select id="adminNewRole" class="ios-input w-full text-sm font-medium">
-            <option value="staff">Role: Staff</option>
-            <option value="admin">Role: Admin</option>
-          </select>
-          <button onclick="execAddUser()" class="ios-btn w-full py-3 text-center">Simpan User Baru</button>
+      <section id="view-report" class="hidden space-y-3">
+        <h2 class="font-bold text-lg">Laporan Stock Opname</h2>
+        <div class="ios-card p-4 space-y-2">
+          <button onclick="exportToExcel()" class="ios-btn w-full py-2.5 bg-green-600">Download Report Excel (.xlsx)</button>
         </div>
+      </section>
 
-        <div class="ios-card p-4 space-y-3">
-          <div class="flex justify-between items-center">
-            <h3 class="text-xs font-bold text-gray-500 uppercase">Daftar Pengguna</h3>
-            <button onclick="loadUserList()" class="text-xs text-blue-600 font-semibold">Refresh</button>
-          </div>
-          <div id="userListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
-        </div>
-      </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50">
-      <button onclick="switchView('dashboard')" class="flex flex-col items-center text-blue-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        <span class="text-[10px] mt-0.5">Home</span>
+    <nav id="nav-bar" class="hidden bg-white/80 backdrop-blur-md border-t border-gray-200 px-6 py-2 flex justify-between items-center text-xs font-medium text-gray-500">
+      <button onclick="switchTab('so')" class="flex flex-col items-center gap-1 text-blue-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>Stock Opname</span>
       </button>
-      <button onclick="switchView('so')" class="flex flex-col items-center text-gray-400 hover:text-blue-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        <span class="text-[10px] mt-0.5">Scan SO</span>
+      <button onclick="switchTab('verifikasi')" class="flex flex-col items-center gap-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Verifikasi</span>
       </button>
-      <button onclick="execLogout()" class="flex flex-col items-center text-red-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        <span class="text-[10px] mt-0.5">Logout</span>
+      <button onclick="switchTab('report')" class="flex flex-col items-center gap-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h55.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span>Report</span>
+      </button>
+      <button onclick="handleLogout()" class="flex flex-col items-center gap-1 text-red-500">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Keluar</span>
       </button>
     </nav>
   </div>
 
-  
-  <script src="js/db.js"></script>
-  <script src="js/scanner.js"></script>
-  <script src="js/sync.js"></script>
-  <script src="js/app.js"></script>
+  <script>
+    const GAS_URL = "DEPLOYED_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+    let currentUser = JSON.parse(localStorage.getItem("so_user")) || null;
+    let masterData = JSON.parse(localStorage.getItem("so_master")) || [];
+    let stockSystem = JSON.parse(localStorage.getItem("so_stock_sys")) || {};
+    let pendingOfflineSO = JSON.parse(localStorage.getItem("so_offline_queue")) || [];
+
+    // AUTO LOGOUT CHECK (12 HOURS)
+    if (currentUser) {
+      const loginTime = currentUser.loginTime || 0;
+      if (Date.now() - loginTime > 12 * 60 * 60 * 1000) {
+        handleLogout();
+      } else {
+        showAppView();
+      }
+    }
+
+    function handleLogin() {
+      const u = document.getElementById("login-username").value;
+      const p = document.getElementById("login-password").value;
+
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "LOGIN", payload: { username: u, password: p } })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.success) {
+          currentUser = { ...data.user, loginTime: Date.now() };
+          localStorage.setItem("so_user", JSON.stringify(currentUser));
+          syncMasterData();
+          showAppView();
+        } else {
+          alert(data.message);
+        }
+      }).catch(() => alert("Koneksi gagal / Offline mode"));
+    }
+
+    function showAppView() {
+      document.getElementById("view-login").classList.add("hidden");
+      document.getElementById("view-so").classList.remove("hidden");
+      document.getElementById("nav-bar").classList.remove("hidden");
+      document.getElementById("user-badge").innerText = `${currentUser.name} (${currentUser.role})`;
+    }
+
+    function syncMasterData() {
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "GET_MASTER_DATA" })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.success) {
+          localStorage.setItem("so_master", JSON.stringify(data.master));
+          localStorage.setItem("so_stock_sys", JSON.stringify(data.stockSystem));
+          populateLokasi(data.lokasiList);
+        }
+      });
+    }
+
+    function populateLokasi(list) {
+      const select = document.getElementById("so-lokasi");
+      select.innerHTML = '<option value="">-- Pilih Lokasi --</option>';
+      list.forEach(item => {
+        select.innerHTML += `<option value="${item.id}">${item.nama}</option>`;
+      });
+    }
+
+    function processBarcodeFind() {
+      const barcode = document.getElementById("input-barcode").value;
+      const master = JSON.parse(localStorage.getItem("so_master")) || [];
+      const stock = JSON.parse(localStorage.getItem("so_stock_sys")) || {};
+      
+      const found = master.find(x => x.upc === barcode || x.article === barcode);
+      const card = document.getElementById("product-card");
+      card.classList.remove("hidden");
+
+      if (found) {
+        document.getElementById("p-desc").innerText = found.desc;
+        document.getElementById("p-upc").innerText = "UPC: " + found.upc;
+        document.getElementById("p-dept").innerText = found.dept;
+        document.getElementById("p-vendor").innerText = found.vendorName;
+        document.getElementById("p-sysqty").innerText = stock[found.upc] || 0;
+      } else {
+        alert("Barcode tidak terdaftar pada Master Data! Data akan disimpan sebagai UNKNOWN.");
+        document.getElementById("p-desc").innerText = "Produk Tidak Dikenal";
+        document.getElementById("p-upc").innerText = "UPC: " + barcode;
+        document.getElementById("p-sysqty").innerText = 0;
+      }
+    }
+
+    function handleSaveSOItem() {
+      const lokasiId = document.getElementById("so-lokasi").value;
+      const barcode = document.getElementById("input-barcode").value;
+      const qty = document.getElementById("so-qty").value;
+      const ket = document.getElementById("so-ket").value;
+
+      if (!lokasiId || !barcode || !qty) return alert("Isi Lokasi, Barcode dan Qty!");
+
+      const payload = {
+        id_so: "SO-" + Date.now(),
+        id_lokasi: lokasiId,
+        nama_lokasi: document.getElementById("so-lokasi").selectedOptions[0].text,
+        kode_upc: barcode,
+        deskripsi_produk: document.getElementById("p-desc").innerText,
+        department: document.getElementById("p-dept").innerText,
+        vendor_code: "-",
+        vendor_name: document.getElementById("p-vendor").innerText,
+        qty_so: Number(qty),
+        keterangan: ket,
+        created_by: currentUser.username,
+        created_at: new Date().toISOString()
+      };
+
+      // Push to offline Queue & Auto Sync
+      pendingOfflineSO.push(payload);
+      localStorage.setItem("so_offline_queue", JSON.stringify(pendingOfflineSO));
+      triggerAutoSync();
+
+      alert("Data berhasil disimpan!");
+      document.getElementById("product-card").classList.add("hidden");
+      document.getElementById("input-barcode").value = "";
+    }
+
+    function triggerAutoSync() {
+      if (navigator.onLine && pendingOfflineSO.length > 0) {
+        fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "SAVE_SO_BATCH", payload: pendingOfflineSO })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            pendingOfflineSO = [];
+            localStorage.setItem("so_offline_queue", JSON.stringify([]));
+          }
+        });
+      }
+    }
+
+    function switchTab(tab) {
+      ['so', 'verifikasi', 'report'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+      });
+      document.getElementById(`view-${tab}`).classList.remove('hidden');
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("so_user");
+      location.reload();
+    }
+
+    function togglePassword() {
+      const x = document.getElementById("login-password");
+      x.type = x.type === "password" ? "text" : "password";
+    }
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
 </body>
 </html>
