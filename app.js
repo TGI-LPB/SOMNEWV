@@ -1,5 +1,5 @@
 // GANTI DENGAN URL WEB APP DARI GOOGLE APPS SCRIPT ANDA
-const API_URL = "URL_WEB_APP_ANDA_DISINI";
+const API_URL = "https://script.google.com/macros/s/AKfycbzR2B4sdR0VbZlk5W9x-4xAPpHjqDFtg_t93Wgpwwclw5fWvCh20DArBF2jz_jarCHq9w/exec";
 
 // State Management & DB Lokal
 const state = { currentUser: null, isOnline: navigator.onLine, html5QrCode: null };
