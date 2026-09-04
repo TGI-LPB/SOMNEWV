@@ -1,6 +1,3 @@
-// ==========================================
-// STATE MANAGEMENT & APP INIT
-// ==========================================
 let currentUser = null;
 let currentScannedItem = null;
 let failedAttempts = 0;
@@ -8,28 +5,18 @@ let blockUntil = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   checkSession();
-  registerServiceWorker();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
 });
 
-function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch(err => console.error("SW Reg Failed:", err));
-  }
-}
-
-// ==========================================
-// AUTHENTICATION LOGIC (LOGIN & SECURITY)
-// ==========================================
 async function execLogin() {
   const usernameInput = document.getElementById("loginUsername").value.trim();
   const passwordInput = document.getElementById("loginPassword").value.trim();
 
-  // Cek jika akun sedang terblokir sementara
   if (blockUntil && Date.now() < blockUntil) {
-    const remainingMinutes = Math.ceil((blockUntil - Date.now()) / 60000);
-    alert(`Akun terblokir! Coba lagi dalam ${remainingMinutes} menit.`);
+    const remMinutes = Math.ceil((blockUntil - Date.now()) / 60000);
+    alert(`Akun terblokir! Coba lagi dalam ${remMinutes} menit.`);
     return;
   }
 
@@ -54,32 +41,22 @@ async function execLogin() {
       failedAttempts = 0;
       currentUser = result.user;
       
-      // Simpan Sesi Login (Auto Logout 12 Jam)
-      const sessionData = {
-        user: currentUser,
-        expiry: Date.now() + (12 * 60 * 60 * 1000)
-      };
+      const sessionData = { user: currentUser, expiry: Date.now() + (12 * 60 * 60 * 1000) };
       localStorage.setItem("som_session", JSON.stringify(sessionData));
 
-      // Download & Cache Data Master ke IndexedDB
       downloadMasterData();
-      
       initAppUI();
     } else {
-      handleFailedLogin();
-      alert(result.message || "Login gagal.");
+      failedAttempts++;
+      if (failedAttempts >= 6) {
+        blockUntil = Date.now() + (10 * 60 * 1000);
+        alert("Salah password 6 kali! Akses diblokir selama 10 menit.");
+      } else {
+        alert(result.message || "Login gagal.");
+      }
     }
   } catch (err) {
-    alert("Gagal terhubung ke server. Periksa koneksi internet Anda.");
-  }
-}
-
-function handleFailedLogin() {
-  failedAttempts++;
-  if (failedAttempts >= 6) {
-    const blockDuration = (failedAttempts / 6) * 10 * 60 * 1000; // 10 menit, 20 menit, dst.
-    blockUntil = Date.now() + blockDuration;
-    alert(`Salah password 6 kali! Akses diblokir selama ${blockDuration / 60000} menit.`);
+    alert("Gagal terhubung ke server.");
   }
 }
 
@@ -108,9 +85,6 @@ function togglePasswordVisibility() {
   pwdInput.type = pwdInput.type === "password" ? "text" : "password";
 }
 
-// ==========================================
-// MASTER DATA SYNC (BACKGROUND CACHING)
-// ==========================================
 async function downloadMasterData() {
   try {
     const response = await fetch(GAS_API_URL, {
@@ -121,26 +95,25 @@ async function downloadMasterData() {
     const result = await response.json();
     if (result.success) {
       await saveMasterToLocal(result.master, result.stockSystem);
-      console.log("Data Master berhasil tersimpan di lokal HP.");
     }
-  } catch (err) {
-    console.warn("Gagal mengunduh Data Master baru, menggunakan data offline lokal.");
-  }
+  } catch (err) {}
 }
 
-// ==========================================
-// UI ROUTER & NAVIGATION
-// ==========================================
 function initAppUI() {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("appScreen").classList.remove("hidden");
   document.getElementById("userDisplayName").innerText = currentUser.namaStaff;
   
+  const btnAdmin = document.getElementById("btnAdminMenu");
+  if (currentUser.role === "admin" && btnAdmin) {
+    btnAdmin.classList.remove("hidden");
+  }
+
   switchView("dashboard");
 }
 
 function switchView(viewName) {
-  const views = ["viewDashboard", "viewSO"];
+  const views = ["viewDashboard", "viewSO", "viewAdminUser"];
   views.forEach(v => {
     const el = document.getElementById(v);
     if (el) el.classList.add("hidden");
@@ -148,20 +121,19 @@ function switchView(viewName) {
 
   if (viewName === "dashboard") {
     document.getElementById("viewDashboard").classList.remove("hidden");
-    if (typeof stopScanner === "function") stopScanner();
+    stopScanner();
   } else if (viewName === "so") {
     document.getElementById("viewSO").classList.remove("hidden");
-    if (typeof initScanner === "function") initScanner();
+    initScanner();
+  } else if (viewName === "adminUser") {
+    document.getElementById("viewAdminUser").classList.remove("hidden");
+    stopScanner();
+    loadUserList();
   }
 }
 
-// ==========================================
-// BARCODE LOOKUP & SO PROCESSING
-// ==========================================
 async function onBarcodeScanned(barcode) {
   if (!barcode) return;
-  
-  // Cari di IndexedDB Lokal
   const item = await searchMasterLocal(barcode);
   
   if (item) {
@@ -170,7 +142,6 @@ async function onBarcodeScanned(barcode) {
     document.getElementById("outDept").innerText = item["Department"] || "-";
     document.getElementById("outVendor").innerText = item["Vendor Name"] || "-";
     
-    // Ambil Qty System dari lokal
     const db = await openDB();
     const tx = db.transaction("stock_system", "readonly");
     const req = tx.objectStore("stock_system").get(barcode);
@@ -178,39 +149,25 @@ async function onBarcodeScanned(barcode) {
       document.getElementById("outQtySys").innerText = req.result ? req.result.qty : "0";
     };
   } else {
-    // Jika tidak terdaftar di Data Master
     currentScannedItem = {
       "Kode UPC": barcode,
-      "Deskripsi Produk": "UNKNOWN / UNREGISTERED",
+      "Deskripsi Produk": "UNKNOWN",
       "Department": "UNKNOWN",
       "Vendor Code": "-",
       "Vendor Name": "-"
     };
-    
-    document.getElementById("outDeskripsi").innerText = "Barang Tidak Terdaftar!";
-    document.getElementById("outDept").innerText = "-";
-    document.getElementById("outVendor").innerText = "-";
+    document.getElementById("outDeskripsi").innerText = "Tidak Terdaftar";
     document.getElementById("outQtySys").innerText = "0";
-    
-    alert("Peringatan: Barcode tidak terdaftar di Data Master! Data tetap bisa disimpan sebagai Unknown.");
   }
 }
 
 async function saveSOData() {
-  const lokasi = document.getElementById("soLokasiSelect")?.value;
+  const lokasi = document.getElementById("soLokasiInput")?.value.trim();
   const qtyInput = document.getElementById("inputQtySO").value;
   const keterangan = document.getElementById("inputKetSO").value;
 
-  if (!lokasi) {
-    alert("Pilih lokasi terlebih dahulu!");
-    return;
-  }
-  if (!currentScannedItem) {
-    alert("Scan barcode barang terlebih dahulu!");
-    return;
-  }
-  if (!qtyInput || parseInt(qtyInput) < 0) {
-    alert("Masukkan Qty fisik yang valid!");
+  if (!lokasi || !currentScannedItem || !qtyInput) {
+    alert("Lengkapi Lokasi, Scan Barcode, dan Qty!");
     return;
   }
 
@@ -227,12 +184,96 @@ async function saveSOData() {
     inputBy: currentUser.username
   };
 
-  // Simpan ke antrean IndexedDB & Auto Sync
   await queueSOData(payload);
-
-  // Reset Form Input
   document.getElementById("inputQtySO").value = "";
   document.getElementById("inputKetSO").value = "";
   document.getElementById("inputBarcodeManual").value = "";
   showToast("Data SO tersimpan!");
+}
+
+async function loadUserList() {
+  const container = document.getElementById("userListContainer");
+  container.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">Memuat...</p>`;
+
+  try {
+    const response = await fetch(GAS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUsers", payload: { role: currentUser.role } })
+    });
+    const result = await response.json();
+    if (result.success) {
+      container.innerHTML = "";
+      result.users.forEach(u => {
+        const isBlocked = u.status === "BLOCKED";
+        const card = document.createElement("div");
+        card.className = "flex items-center justify-between p-3 bg-gray-50 rounded-xl text-xs";
+        card.innerHTML = `
+          <div>
+            <p class="font-bold">${u.namaStaff} (@${u.username})</p>
+            <p class="text-[10px] text-gray-500">${u.role} | ${u.status}</p>
+          </div>
+          <div class="flex space-x-1">
+            <button onclick="execResetPassword('${u.username}')" class="bg-blue-50 text-blue-600 px-2 py-1 rounded">Reset</button>
+            <button onclick="execToggleStatus('${u.username}')" class="bg-red-50 text-red-600 px-2 py-1 rounded">${isBlocked ? 'Unblock' : 'Block'}</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+  } catch (err) {}
+}
+
+async function execAddUser() {
+  const username = document.getElementById("adminNewUsername").value.trim();
+  const namaStaff = document.getElementById("adminNewNama").value.trim();
+  const password = document.getElementById("adminNewPassword").value.trim();
+  const role = document.getElementById("adminNewRole").value;
+
+  if (!username || !namaStaff || password.length < 6) {
+    alert("Isi data dengan benar!");
+    return;
+  }
+
+  const response = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "addUser",
+      payload: { adminRole: currentUser.role, adminUsername: currentUser.username, username, namaStaff, password, role }
+    })
+  });
+  const result = await response.json();
+  alert(result.message);
+  if (result.success) loadUserList();
+}
+
+async function execResetPassword(targetUsername) {
+  const newPassword = prompt(`Password baru untuk @${targetUsername}:`);
+  if (!newPassword || newPassword.length < 6) return;
+
+  const response = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "resetPassword",
+      payload: { adminRole: currentUser.role, adminUsername: currentUser.username, targetUsername, newPassword }
+    })
+  });
+  const result = await response.json();
+  alert(result.message);
+}
+
+async function execToggleStatus(targetUsername) {
+  const response = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "toggleUserStatus",
+      payload: { adminRole: currentUser.role, adminUsername: currentUser.username, targetUsername }
+    })
+  });
+  const result = await response.json();
+  alert(result.message);
+  loadUserList();
 }
