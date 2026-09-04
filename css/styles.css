@@ -1,4 +1,3 @@
-/* iOS 18 Design System & Smooth UX */
 :root {
   --ios-bg: #F2F2F7;
   --ios-card: #FFFFFF;
@@ -15,26 +14,17 @@ body {
   user-select: none;
 }
 
-/* Glassmorphism Navigation & Headers */
-.ios-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* Card Styling */
 .ios-card {
   background: var(--ios-card);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .ios-card:active {
   transform: scale(0.985);
 }
 
-/* Custom Input Field */
 .ios-input {
   background: #EFEFF4;
   border-radius: 12px;
@@ -50,7 +40,6 @@ body {
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
-/* Primary Button */
 .ios-btn {
   background-color: var(--ios-accent);
   color: #FFFFFF;
@@ -64,7 +53,6 @@ body {
   transform: scale(0.97);
 }
 
-/* Scanner Laser Line Animation */
 @keyframes laserSweep {
   0% { top: 0%; }
   50% { top: 95%; }
@@ -79,13 +67,4 @@ body {
   background-color: #FF3B30;
   box-shadow: 0 0 8px #FF3B30;
   animation: laserSweep 2s infinite ease-in-out;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-thumb {
-  background: #C7C7CC;
-  border-radius: 10px;
 }
