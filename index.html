@@ -6,20 +6,15 @@
   <title>Stock Opname Mandiri</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#F2F2F7">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #F2F2F7; color: #1C1C1E; }
-    .ios-card { background: #FFFFFF; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .ios-btn { background-color: #007AFF; color: white; border-radius: 12px; font-weight: 600; }
-    .ios-btn:active { opacity: 0.7; }
-    .ios-input { background: #EFEFF4; border-radius: 10px; padding: 12px 16px; border: none; outline: none; }
-    .ios-input:focus { background: #E5E5EA; }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="antialiased select-none">
 
+  <!-- LOGIN SCREEN -->
   <div id="loginScreen" class="min-h-screen flex flex-col justify-between p-6">
     <div class="mt-12 text-center">
       <div class="w-20 h-20 bg-gray-200 rounded-3xl mx-auto flex items-center justify-center mb-4 shadow-inner">
@@ -44,9 +39,6 @@
         </div>
       </div>
       <button onclick="execLogin()" class="ios-btn w-full py-3 text-center mt-2 shadow-sm">Masuk</button>
-      <div class="text-center">
-        <a href="#" class="text-xs text-blue-600">Lupa Password?</a>
-      </div>
     </div>
 
     <div id="pwaInstallBanner" class="ios-card p-4 flex items-center justify-between border border-gray-100">
@@ -57,10 +49,11 @@
           <p class="text-[10px] text-gray-400">Gunakan offline di iOS/Android</p>
         </div>
       </div>
-      <button onclick="installPWA()" class="text-xs bg-gray-100 text-black px-3 py-1.5 rounded-full font-semibold">Install</button>
+      <button class="text-xs bg-gray-100 text-black px-3 py-1.5 rounded-full font-semibold">Install</button>
     </div>
   </div>
 
+  <!-- MAIN APP SCREEN (DASHBOARD) -->
   <div id="appScreen" class="hidden min-h-screen flex flex-col pb-20">
     <div class="bg-white/80 backdrop-blur-md sticky top-0 z-40 px-5 py-4 border-b border-gray-200 flex justify-between items-center">
       <div>
@@ -74,6 +67,7 @@
     </div>
 
     <main id="mainContainer" class="p-4 space-y-4">
+      <!-- VIEW DASHBOARD MENU -->
       <div id="viewDashboard" class="grid grid-cols-2 gap-4">
         <button onclick="switchView('so')" class="ios-card p-5 text-left space-y-2 hover:bg-gray-50 transition">
           <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -90,41 +84,39 @@
           <p class="font-bold text-sm">Verifikasi</p>
           <p class="text-[10px] text-gray-400">Cek & validasi selisih Qty</p>
         </button>
+
+        <!-- Menu Admin -->
+        <button id="btnAdminMenu" onclick="switchView('adminUser')" class="ios-card p-5 text-left space-y-2 hover:bg-gray-50 transition hidden border border-purple-100 col-span-2">
+          <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          </div>
+          <p class="font-bold text-sm">Kelola User Admin</p>
+          <p class="text-[10px] text-gray-400">Tambah user & reset password</p>
+        </button>
       </div>
 
+      <!-- VIEW STOCK OPNAME (SO) -->
       <div id="viewSO" class="hidden space-y-4">
         <div class="ios-card p-4 space-y-3">
-          <div class="flex justify-between items-center">
-            <label class="text-xs font-bold text-gray-500 uppercase">1. Pilih / Input Lokasi</label>
-            <button onclick="openLocationModal()" class="text-xs text-blue-600 font-semibold">+ Lokasi Manual</button>
-          </div>
-          <select id="soLokasiSelect" class="ios-input w-full text-sm font-medium">
-            <option value="">-- Pilih Lokasi --</option>
-          </select>
+          <label class="text-xs font-bold text-gray-500 uppercase">1. Pilih / Input Lokasi</label>
+          <input type="text" id="soLokasiInput" class="ios-input w-full text-sm" placeholder="Ketik Kode Lokasi (misal: RAK-A1)">
         </div>
 
         <div class="ios-card p-4 space-y-3">
           <div class="flex justify-between items-center">
             <label class="text-xs font-bold text-gray-500 uppercase">2. Scan / Barcode</label>
-            <select id="scannerEngine" onchange="changeScannerEngine()" class="text-xs bg-gray-100 rounded-lg px-2 py-1">
-              <option value="html5qr">Html5Qrcode Engine</option>
-              <option value="quagga">QuaggaJS Engine</option>
-            </select>
           </div>
 
           <div id="interactiveScanner" class="relative bg-black rounded-xl overflow-hidden h-48 flex items-center justify-center">
             <div id="reader" class="w-full h-full"></div>
             <div class="absolute inset-0 pointer-events-none border-2 border-white/30 flex items-center justify-center">
               <div class="w-48 h-24 border-2 border-red-500 rounded-lg relative">
-                <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-red-500/80 animate-pulse"></div>
+                <div class="scanner-laser"></div>
               </div>
             </div>
-            <button onclick="toggleTorch()" class="absolute bottom-2 right-2 bg-white/20 p-2 rounded-full text-white backdrop-blur-md">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </button>
           </div>
 
-          <input type="text" id="inputBarcodeManual" onchange="onBarcodeScanned(this.value)" class="ios-input w-full text-sm font-mono" placeholder="Atau ketik Barcode / UPC lalu press Enter">
+          <input type="text" id="inputBarcodeManual" onchange="onBarcodeScanned(this.value)" class="ios-input w-full text-sm font-mono" placeholder="Atau ketik Barcode / UPC lalu Enter">
         </div>
 
         <div class="ios-card p-4 space-y-2">
@@ -145,6 +137,29 @@
           <button onclick="saveSOData()" class="ios-btn w-full py-3.5 text-center shadow-lg">Simpan Data SO</button>
         </div>
       </div>
+
+      <!-- VIEW SETUP USER ADMIN -->
+      <div id="viewAdminUser" class="hidden space-y-4">
+        <div class="ios-card p-4 space-y-3">
+          <h3 class="text-xs font-bold text-gray-500 uppercase">Tambah User Baru</h3>
+          <input type="text" id="adminNewUsername" class="ios-input w-full text-sm" placeholder="Username">
+          <input type="text" id="adminNewNama" class="ios-input w-full text-sm" placeholder="Nama Staff">
+          <input type="password" id="adminNewPassword" class="ios-input w-full text-sm" placeholder="Password (Min 6 Karakter)">
+          <select id="adminNewRole" class="ios-input w-full text-sm font-medium">
+            <option value="staff">Role: Staff</option>
+            <option value="admin">Role: Admin</option>
+          </select>
+          <button onclick="execAddUser()" class="ios-btn w-full py-3 text-center">Simpan User Baru</button>
+        </div>
+
+        <div class="ios-card p-4 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold text-gray-500 uppercase">Daftar Pengguna</h3>
+            <button onclick="loadUserList()" class="text-xs text-blue-600 font-semibold">Refresh</button>
+          </div>
+          <div id="userListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+      </div>
     </main>
 
     <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50">
@@ -155,10 +170,6 @@
       <button onclick="switchView('so')" class="flex flex-col items-center text-gray-400 hover:text-blue-600">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span class="text-[10px] mt-0.5">Scan SO</span>
-      </button>
-      <button onclick="switchView('history')" class="flex flex-col items-center text-gray-400 hover:text-blue-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <span class="text-[10px] mt-0.5">History</span>
       </button>
       <button onclick="execLogout()" class="flex flex-col items-center text-red-500">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
