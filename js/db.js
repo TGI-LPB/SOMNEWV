@@ -7,8 +7,7 @@ function openDB() {
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("master")) {
-        const masterStore = db.createObjectStore("master", { keyPath: "Kode UPC" });
-        masterStore.createIndex("Artikel Number", "Artikel Number", { unique: false });
+        db.createObjectStore("master", { keyPath: "Kode UPC" });
       }
       if (!db.objectStoreNames.contains("so_queue")) {
         db.createObjectStore("so_queue", { autoIncrement: true });
@@ -41,9 +40,6 @@ async function searchMasterLocal(code) {
   
   return new Promise((resolve) => {
     const req = store.get(code);
-    req.onsuccess = () => {
-      if (req.result) resolve(req.result);
-      else resolve(null);
-    };
+    req.onsuccess = () => resolve(req.result || null);
   });
 }
